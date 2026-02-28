@@ -1,0 +1,11 @@
+{
+  "name": "keysite",
+  "version": "1.0.0",
+  "description": "Key system for Roblox script",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}

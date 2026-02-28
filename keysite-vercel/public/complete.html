@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ta Key est prête !</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#0d1117; --surface:#161b22; --border:#30363d;
+      --accent:#58a6ff; --accent2:#a855f7;
+      --success:#2fb777; --error:#f85149;
+      --text:#e6edf3; --muted:#8b949e;
+      --mono:'Space Mono',monospace; --sans:'Syne',sans-serif;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body {
+      background:var(--bg); color:var(--text);
+      font-family:var(--sans); min-height:100vh;
+      display:flex; align-items:center; justify-content:center; padding:20px;
+    }
+    body::before {
+      content:''; position:fixed; inset:0;
+      background-image: linear-gradient(rgba(48,54,61,.5) 1px,transparent 1px), linear-gradient(90deg,rgba(48,54,61,.5) 1px,transparent 1px);
+      background-size:50px 50px; z-index:0;
+    }
+    .wrap { position:relative; z-index:1; width:100%; max-width:460px; text-align:center; }
+
+    .icon {
+      width:80px; height:80px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      margin:0 auto 24px;
+      animation:popIn .5s cubic-bezier(.175,.885,.32,1.275) both;
+    }
+    .icon.success { background:rgba(47,183,119,.1); border:2px solid var(--success); box-shadow:0 0 40px rgba(47,183,119,.25); }
+    .icon.error   { background:rgba(248,81,73,.1);  border:2px solid var(--error);   box-shadow:0 0 40px rgba(248,81,73,.25); }
+
+    @keyframes popIn { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+
+    h2 { font-size:30px; font-weight:900; margin-bottom:8px; animation:fadeUp .4s ease .1s both; }
+    .sub { font-family:var(--mono); font-size:13px; color:var(--muted); margin-bottom:32px; animation:fadeUp .4s ease .15s both; }
+
+    .card {
+      background:var(--surface); border:1px solid var(--border); border-radius:16px;
+      overflow:hidden; animation:fadeUp .4s ease .2s both; margin-bottom:16px; position:relative;
+    }
+    .card::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:1px;
+      background:linear-gradient(90deg,transparent,var(--success),transparent);
+    }
+    .card-inner { padding:26px; }
+
+    .key-label { font-family:var(--mono); font-size:11px; letter-spacing:3px; color:var(--success); margin-bottom:10px; }
+    .key-val {
+      font-family:var(--mono); font-size:22px; font-weight:700;
+      color:#fff; letter-spacing:4px; word-break:break-all; margin-bottom:8px;
+    }
+    .key-exp { font-family:var(--mono); font-size:11px; color:var(--muted); }
+
+    .btn {
+      display:flex; align-items:center; justify-content:center; gap:8px;
+      width:100%; padding:15px; border:none; border-radius:10px;
+      font-family:var(--sans); font-size:15px; font-weight:700; cursor:pointer; transition:all .2s;
+    }
+    .btn-green {
+      background:linear-gradient(135deg,var(--success),#059669);
+      color:#fff; box-shadow:0 4px 20px rgba(47,183,119,.3); margin-bottom:10px;
+    }
+    .btn-green:hover { transform:translateY(-2px); }
+    .btn-back { background:rgba(255,255,255,.05); border:1px solid var(--border); color:var(--muted); text-decoration:none; }
+    .btn-back:hover { color:var(--text); }
+
+    .error-box {
+      background:rgba(248,81,73,.07); border:1px solid rgba(248,81,73,.25);
+      border-radius:12px; padding:20px; font-family:var(--mono); font-size:13px;
+      color:var(--error); margin-bottom:24px; animation:fadeUp .4s ease .15s both;
+    }
+
+    /* Confetti */
+    .confetti { position:fixed; inset:0; pointer-events:none; z-index:0; }
+    .c { position:absolute; border-radius:2px; animation:fall linear infinite; }
+    @keyframes fall {
+      from { transform:translateY(-20px) rotate(0deg); opacity:1; }
+      to   { transform:translateY(100vh) rotate(720deg); opacity:0; }
+    }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+  </style>
+</head>
+<body>
+
+<div class="confetti" id="conf"></div>
+
+<div class="wrap" id="app">
+  <!-- Rempli par JS -->
+</div>
+
+<script>
+  const params = new URLSearchParams(location.search);
+  const token = params.get('token');
+  const app = document.getElementById('app');
+
+  async function loadKey() {
+    if (!token) {
+      showError('Token manquant. Retourne sur la page principale.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/complete?token=${token}`);
+      const data = await res.json();
+
+      if (data.success) {
+        showSuccess(data.key, data.expires_at);
+      } else {
+        showError(data.error || 'Une erreur est survenue.');
+      }
+    } catch(e) {
+      showError('Impossible de contacter le serveur. Réessaie.');
+    }
+  }
+
+  function showSuccess(key, expiresAt) {
+    const exp = new Date(expiresAt);
+    const expStr = `Expire le ${exp.toLocaleDateString('fr-FR')} à ${exp.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`;
+
+    app.innerHTML = `
+      <div class="icon success">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+          <path d="M5 13l4 4L19 7" stroke="#2fb777" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h2>Key générée !</h2>
+      <p class="sub">Copie ta key et colle-la dans le script</p>
+      <div class="card">
+        <div class="card-inner">
+          <div class="key-label">🔑 TA KEY</div>
+          <div class="key-val" id="theKey">${key}</div>
+          <div class="key-exp">${expStr}</div>
+        </div>
+      </div>
+      <button class="btn btn-green" onclick="copyKey('${key}', this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" stroke-width="2"/></svg>
+        Copier la Key
+      </button>
+      <a href="/" class="btn btn-back">← Retour à l'accueil</a>
+    `;
+
+    launchConfetti();
+  }
+
+  function showError(msg) {
+    app.innerHTML = `
+      <div class="icon error">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+          <path d="M6 18L18 6M6 6l12 12" stroke="#f85149" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h2>Erreur</h2>
+      <div class="error-box">${msg}</div>
+      <a href="/" class="btn btn-back">← Recommencer</a>
+    `;
+  }
+
+  function copyKey(key, btn) {
+    navigator.clipboard.writeText(key).then(() => {
+      btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Copié !`;
+      setTimeout(() => {
+        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" stroke-width="2"/></svg> Copier la Key`;
+      }, 2500);
+    });
+  }
+
+  function launchConfetti() {
+    const c = document.getElementById('conf');
+    const colors = ['#58a6ff','#a855f7','#2fb777','#fbbf24','#f472b6'];
+    for (let i = 0; i < 60; i++) {
+      const el = document.createElement('div');
+      el.className = 'c';
+      const size = Math.random()*6+4;
+      el.style.cssText = `
+        width:${size}px; height:${size}px;
+        left:${Math.random()*100}vw;
+        background:${colors[Math.floor(Math.random()*colors.length)]};
+        animation-duration:${2+Math.random()*3}s;
+        animation-delay:${Math.random()*2}s;
+        border-radius:${Math.random()>0.5?'50%':'2px'};
+      `;
+      c.appendChild(el);
+    }
+  }
+
+  loadKey();
+</script>
+</body>
+</html>
